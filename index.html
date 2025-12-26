@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แผนการเทรดระบบแม่ปลาปากกาเขียว</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <!-- html2canvas & jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        /* Custom scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Modal Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-animate {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-20">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Icons Components ---
+        const SaveIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        );
+        const DownloadIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        );
+        const CalendarIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        );
+        const ArrowUpCircleIcon = ({size=16}) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
+        );
+        const ArrowDownCircleIcon = ({size=16}) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+        );
+        const CheckCircleIcon = ({ filled }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        );
+        const RotateCcwIcon = ({size=18}) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        );
+        const HistoryIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        );
+        const PlusIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        );
+        const TrashIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        );
+        const ChevronUpIcon = ({size=24}) => (
+             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        );
+        const ChevronDownIcon = ({size=24}) => (
+             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        );
+        const ClockIcon = () => (
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        );
+        const SparklesIcon = () => (
+             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        );
+        const XIcon = () => (
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        );
+        const CopyIcon = () => (
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        );
+        const PasteIcon = () => (
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>
+        );
+
+
+        // --- Configuration ---
+        const TIMEFRAMES = [
+            { id: 'MN', label: 'Month (M1)', color: 'bg-pink-600', text: 'text-white', tp1: 500, tp2: 1000 },
+            { id: 'W1', label: 'Week (W1)', color: 'bg-purple-700', text: 'text-white', tp1: 150, tp2: 300 },
+            { id: 'D1', label: 'Day (D1)', color: 'bg-blue-900', text: 'text-white', tp1: 50, tp2: 100 },
+            { id: 'H4', label: 'H4', color: 'bg-cyan-500', text: 'text-black', tp1: 15, tp2: 30 },
+            { id: 'H1', label: 'H1', color: 'bg-green-600', text: 'text-white', tp1: 10, tp2: null },
+            { id: 'm30', label: 'm30', color: 'bg-green-300', text: 'text-black', tp1: 0, tp2: 0 },
+            { id: 'm15', label: 'm15', color: 'bg-yellow-400', text: 'text-black', tp1: 0, tp2: 0 },
+            { id: 'm5', label: 'm5', color: 'bg-orange-500', text: 'text-white', tp1: 0, tp2: 0 },
+            { id: 'm1', label: 'm1', color: 'bg-red-600', text: 'text-white', tp1: 0, tp2: 0 },
+        ];
+
+        const CYCLES = ['Sig', 'TP', 'พักตัว', 'SW'];
+
+        // --- Pattern Options (Images) ---
+        const BUY_PATTERNS = [
+            { value: 'PA Buy PAT 1', label: 'PA Buy PAT 1', image: 'https://placehold.co/100x100/e6f4ea/1e7e34?text=B1' },
+            { value: 'PA Buy PAT 2', label: 'PA Buy PAT 2', image: 'https://placehold.co/100x100/e6f4ea/1e7e34?text=B2' },
+            { value: 'PA Buy PAT 3/1', label: 'PA Buy PAT 3/1', image: 'https://placehold.co/100x100/e6f4ea/1e7e34?text=B3/1' },
+            { value: 'PA Buy PAT 3/2', label: 'PA Buy PAT 3/2', image: 'https://placehold.co/100x100/e6f4ea/1e7e34?text=B3/2' },
+            { value: 'PA Buy PAT 3/3', label: 'PA Buy PAT 3/3', image: 'https://placehold.co/100x100/e6f4ea/1e7e34?text=B3/3' }
+        ];
+
+        const SELL_PATTERNS = [
+            { value: 'PA Sell PAT 1', label: 'PA Sell PAT 1', image: 'https://placehold.co/100x100/fce8e6/c5221f?text=S1' },
+            { value: 'PA Sell PAT 2', label: 'PA Sell PAT 2', image: 'https://placehold.co/100x100/fce8e6/c5221f?text=S2' },
+            { value: 'PA Sell PAT 3/1', label: 'PA Sell PAT 3/1', image: 'https://placehold.co/100x100/fce8e6/c5221f?text=S3/1' },
+            { value: 'PA Sell PAT 3/2', label: 'PA Sell PAT 3/2', image: 'https://placehold.co/100x100/fce8e6/c5221f?text=S3/2' },
+            { value: 'PA Sell PAT 3/3', label: 'PA Sell PAT 3/3', image: 'https://placehold.co/100x100/fce8e6/c5221f?text=S3/3' }
+        ];
+
+        const createEmptyPlan = () => ({
+            id: Date.now(),
+            time: '',
+            cycle: '',
+            direction: 'BUY',
+            pattern: '',
+            entryPrice: '',
+            swUpper: '', 
+            swLower: '', 
+            tp1Hit: false,
+            tp2Hit: false,
+            note: ''
+        });
+
+        // --- Custom Image Select Component ---
+        const ImageSelect = ({ value, options, onChange, placeholder, disabled }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const wrapperRef = useRef(null);
+
+            useEffect(() => {
+                function handleClickOutside(event) {
+                    if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                    }
+                }
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, [wrapperRef]);
+
+            const selectedOption = options.find(opt => opt.value === value);
+
+            return (
+                <div className="relative" ref={wrapperRef}>
+                    <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">Pattern Selection</label>
+                    
+                    <div 
+                        onClick={() => !disabled && setIsOpen(!isOpen)}
+                        className={`w-full p-2 border rounded-lg bg-white flex items-center justify-between cursor-pointer transition-colors shadow-sm min-h-[50px]
+                            ${disabled ? 'bg-gray-100 cursor-not-allowed border-gray-200' : 'border-gray-300 hover:border-blue-400'}`}
+                    >
+                        {selectedOption ? (
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 bg-gray-100 rounded-md overflow-hidden shrink-0 border border-gray-200">
+                                    {selectedOption.image ? (
+                                        <img src={selectedOption.image} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">Img</div>
+                                    )}
+                                </div>
+                                <span className="text-sm text-gray-800 font-medium truncate">{selectedOption.label}</span>
+                            </div>
+                        ) : (
+                            <span className="text-sm text-gray-400 px-1">{placeholder}</span>
+                        )}
+                        <div className={`text-gray-400 shrink-0 ${disabled ? 'opacity-50' : ''}`}>
+                            <ChevronDownIcon size={16} />
+                        </div>
+                    </div>
+
+                    {isOpen && !disabled && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto left-0">
+                            {options.map((opt) => (
+                                <div 
+                                    key={opt.value}
+                                    onClick={() => {
+                                        onChange(opt.value);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`flex items-center gap-3 p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors
+                                        ${value === opt.value ? 'bg-blue-50/50' : ''}`}
+                                >
+                                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden shrink-0 border border-gray-200 group-hover:border-blue-200">
+                                        {opt.image ? (
+                                            <img src={opt.image} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">Img</div>
+                                        )}
+                                    </div>
+                                    <span className={`text-sm ${value === opt.value ? 'font-bold text-blue-600' : 'text-gray-700'}`}>
+                                        {opt.label}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+            const [savedDates, setSavedDates] = useState([]);
+            const [saveStatus, setSaveStatus] = useState('');
+            const [showSummary, setShowSummary] = useState(false);
+            const [summaryContent, setSummaryContent] = useState('');
+            
+            // Collapsed States
+            const [isDailyLevelsCollapsed, setIsDailyLevelsCollapsed] = useState(false);
+            const [isExternalPlanCollapsed, setIsExternalPlanCollapsed] = useState(false); // New state
+            
+            const [externalPlan, setExternalPlan] = useState('');
+            const [copyStatus, setCopyStatus] = useState('');
+            const [isExporting, setIsExporting] = useState(false);
+            
+            const [levels, setLevels] = useState({
+                mainRes: '',
+                minor: '',
+                mainSup: ''
+            });
+
+            const [plans, setPlans] = useState({});
+            const [collapsedTFs, setCollapsedTFs] = useState({});
+
+            useEffect(() => {
+                try {
+                    const existingData = localStorage.getItem('trading_history_keys');
+                    if (existingData) {
+                        setSavedDates(JSON.parse(existingData));
+                    }
+                } catch (e) {
+                    console.error("Error loading history keys", e);
+                }
+                loadDataForDate(new Date().toISOString().split('T')[0]);
+            }, []);
+
+            const normalizePlans = (loadedPlans) => {
+                const normalized = {};
+                TIMEFRAMES.forEach(tf => {
+                    const planData = loadedPlans[tf.id];
+                    if (!planData) {
+                        normalized[tf.id] = [createEmptyPlan()];
+                    } else if (Array.isArray(planData)) {
+                        normalized[tf.id] = planData.map(p => ({
+                            ...createEmptyPlan(),
+                            ...p
+                        }));
+                    } else {
+                        normalized[tf.id] = [{...createEmptyPlan(), ...planData, id: Date.now(), time: ''}];
+                    }
+                });
+                return normalized;
+            };
+
+            const loadDataForDate = (date) => {
+                try {
+                    const savedData = localStorage.getItem(`trading_plan_${date}`);
+                    if (savedData) {
+                        const parsed = JSON.parse(savedData);
+                        setLevels(parsed.levels || { mainRes: '', minor: '', mainSup: '' });
+                        setPlans(normalizePlans(parsed.plans || {}));
+                        setExternalPlan(parsed.externalPlan || '');
+                    } else {
+                        setLevels({ mainRes: '', minor: '', mainSup: '' });
+                        setExternalPlan('');
+                        const resetPlans = {};
+                        TIMEFRAMES.forEach(tf => {
+                            resetPlans[tf.id] = [createEmptyPlan()];
+                        });
+                        setPlans(resetPlans);
+                    }
+                } catch (e) {
+                    console.error("Error loading data", e);
+                }
+                setCurrentDate(date);
+                setSaveStatus('');
+            };
+
+            const downloadCSV = () => {
+                const headers = [
+                    "Date", "Timeframe", "Time", "Direction", "Pattern", "Entry Price",
+                    "Cycle", "SW Upper", "SW Lower", "TP1 Hit", "TP2 Hit", "Note",
+                    "Daily Main Res", "Daily Minor", "Daily Main Sup", "External Plan"
+                ];
+
+                const rows = [];
+                let hasPlans = false;
+                
+                // Iterate through all timeframes and plans
+                TIMEFRAMES.forEach(tf => {
+                    const tfPlans = plans[tf.id] || [];
+                    tfPlans.forEach(plan => {
+                        // Only export if there is some data in the plan
+                        if(plan.entryPrice || plan.pattern || plan.note || plan.swUpper || plan.swLower) {
+                            hasPlans = true;
+                            rows.push([
+                                currentDate,
+                                tf.label,
+                                plan.time || '-',
+                                plan.direction,
+                                plan.pattern || '-',
+                                plan.entryPrice || '-',
+                                plan.cycle || '-',
+                                plan.swUpper || '-',
+                                plan.swLower || '-',
+                                plan.tp1Hit ? "Yes" : "No",
+                                plan.tp2Hit ? "Yes" : "No",
+                                `"${(plan.note || '').replace(/"/g, '""')}"`, // Escape quotes for CSV
+                                levels.mainRes || '-',
+                                levels.minor || '-',
+                                levels.mainSup || '-',
+                                `"${(externalPlan || '').replace(/"/g, '""').replace(/\n/g, ' ')}"` // Escape quotes & newlines
+                            ]);
+                        }
+                    });
+                });
+
+                // If no plans, ensure we at least export levels and external plan
+                if (!hasPlans) {
+                     rows.push([
+                        currentDate, "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", 
+                        levels.mainRes || '-', levels.minor || '-', levels.mainSup || '-', 
+                        `"${(externalPlan || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
+                    ]);
+                }
+
+                // Create CSV String
+                const csvContent = [
+                    headers.join(","),
+                    ...rows.map(e => e.join(","))
+                ].join("\n");
+
+                // Create Blob with BOM for Thai support
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                
+                // Trigger Download
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `trading_plan_${currentDate}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const saveData = () => {
+                try {
+                    const dataToSave = { levels, plans, externalPlan };
+                    
+                    // 1. Save Local
+                    localStorage.setItem(`trading_plan_${currentDate}`, JSON.stringify(dataToSave));
+                    if (!savedDates.includes(currentDate)) {
+                        const newDates = [...savedDates, currentDate].sort().reverse();
+                        setSavedDates(newDates);
+                        localStorage.setItem('trading_history_keys', JSON.stringify(newDates));
+                    }
+                    
+                    // 2. Download CSV
+                    downloadCSV();
+                    
+                    setSaveStatus('บันทึก & CSV เรียบร้อย!');
+                    setTimeout(() => setSaveStatus(''), 3000);
+                } catch (e) {
+                    console.error(e);
+                    setSaveStatus('เกิดข้อผิดพลาดในการบันทึก');
+                }
+            };
+
+            // --- PDF Export Function ---
+            const exportToPDF = async () => {
+                if (isExporting) return;
+                setIsExporting(true);
+                setSaveStatus('กำลังสร้าง PDF...');
+
+                try {
+                    const element = document.getElementById('main-content');
+                    if (!element) throw new Error("Element not found");
+
+                    const canvas = await html2canvas(element, {
+                        scale: 2, 
+                        useCORS: true, 
+                        logging: false,
+                        backgroundColor: '#f3f4f6' 
+                    });
+
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+
+                    const imgProps = pdf.getImageProperties(imgData);
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                    if (pdfHeight > pdf.internal.pageSize.getHeight()) {
+                         const longPdf = new jsPDF({
+                            orientation: 'p',
+                            unit: 'mm',
+                            format: [pdfWidth, pdfHeight] 
+                         });
+                         longPdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                         longPdf.save(`trading-plan-${currentDate}.pdf`);
+                    } else {
+                         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                         pdf.save(`trading-plan-${currentDate}.pdf`);
+                    }
+                    
+                    setSaveStatus('ดาวน์โหลด PDF สำเร็จ!');
+                } catch (error) {
+                    console.error("Export Error:", error);
+                    setSaveStatus('เกิดข้อผิดพลาดในการ Export');
+                } finally {
+                    setIsExporting(false);
+                    setTimeout(() => setSaveStatus(''), 3000);
+                }
+            };
+
+            const generateSummary = () => {
+                let activePlans = 0;
+                let buyCount = 0;
+                let sellCount = 0;
+                let successfulTPs = 0;
+                let details = [];
+
+                TIMEFRAMES.forEach(tf => {
+                    const tfPlans = plans[tf.id] || [];
+                    tfPlans.forEach((plan, idx) => {
+                        const hasData = plan.entryPrice || plan.swUpper || plan.swLower || plan.note;
+                        if (!hasData) return; 
+                        
+                        activePlans++;
+                        if (plan.entryPrice) {
+                            if (plan.direction === 'BUY') buyCount++;
+                            if (plan.direction === 'SELL') sellCount++;
+                        }
+                        if (plan.tp1Hit || plan.tp2Hit) successfulTPs++;
+                        
+                        const timeStr = plan.time ? `[${plan.time}] ` : '';
+                        const patternStr = plan.pattern ? `(${plan.pattern})` : '';
+                        const swStr = (plan.swUpper || plan.swLower) ? ` [SW กรอบ: ${plan.swUpper || '-'}/${plan.swLower || '-'}]` : '';
+                        const entryStr = plan.entryPrice ? `Entry: ${plan.entryPrice}` : '';
+                        
+                        details.push(`- ${timeStr}${tf.label} (${plan.direction}): ${patternStr} ${entryStr}${swStr} [${plan.cycle || '-'}] ${plan.tp1Hit ? '✅' : ''}`);
+                    });
+                });
+
+                let sentiment = "ไม่มีทิศทางชัดเจน (Neutral)";
+                if (buyCount > sellCount && sellCount === 0) sentiment = "ขาขึ้นเต็มตัว (Strong Bullish) 🟢";
+                else if (buyCount > sellCount) sentiment = "มองขึ้นเป็นหลัก (Bullish Bias) 🟢";
+                else if (sellCount > buyCount && buyCount === 0) sentiment = "ขาลงเต็มตัว (Strong Bearish) 🔴";
+                else if (sellCount > buyCount) sentiment = "มองลงเป็นหลัก (Bearish Bias) 🔴";
+
+                let advice = "";
+                if (activePlans === 0) {
+                    advice = "ยังไม่มีแผนการเทรดสำหรับวันนี้ กรุณากรอกข้อมูล";
+                } else if (buyCount > 0 && sellCount > 0) {
+                    advice = "⚠️ ตลาดมีความผันผวนหรือแผนขัดแย้งกัน (Mixed Bias) ควรระมัดระวังในการเข้าออเดอร์ หรือรอให้ TF เล็กสอดคล้องกับ TF ใหญ่";
+                } else {
+                    advice = "✅ แผนมีความสอดคล้องในทิศทางเดียวกัน (Confluence) มีโอกาสความสำเร็จสูงกว่าปกติ";
+                }
+
+                const externalSection = externalPlan ? `\n\n📋 แผนจากภายนอก/บันทึกเพิ่มเติม:\n${externalPlan}` : "";
+
+                const summary = `📊 สรุปแผนการเทรดแม่ปลาปากกาเขียว (${currentDate})
+----------------------------------------
+🎯 กรอบราคาสำคัญ
+- ต้านหลัก: ${levels.mainRes || '-'}
+- ต้านย่อย/รับย่อย: ${levels.minor || '-'}
+- รับหลัก: ${levels.mainSup || '-'}
+
+🧭 ภาพรวมตลาด
+- ทิศทาง: ${sentiment}
+- จำนวนแผน: ${activePlans} (Buy: ${buyCount} / Sell: ${sellCount})
+- สำเร็จ (TP): ${successfulTPs}
+
+📝 รายละเอียดแผนภายใน
+${details.length > 0 ? details.join('\n') : "- ยังไม่มีแผน"}${externalSection}
+
+🤖 AI Analysis: 
+${advice}`;
+                
+                setSummaryContent(summary);
+                setShowSummary(true);
+            };
+
+            const copyToClipboard = () => {
+                const textArea = document.createElement("textarea");
+                textArea.value = summaryContent;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    if(successful) {
+                        setCopyStatus("คัดลอกเรียบร้อย!");
+                        setTimeout(() => setCopyStatus(""), 2000);
+                    } else {
+                        setCopyStatus("คัดลอกไม่สำเร็จ");
+                    }
+                } catch (err) {
+                    console.error('Unable to copy', err);
+                    setCopyStatus("เกิดข้อผิดพลาด");
+                }
+                document.body.removeChild(textArea);
+            };
+
+            const handleLevelChange = (field, value) => {
+                if (!value) {
+                    setLevels(prev => ({ ...prev, [field]: '' }));
+                    return;
+                }
+                const numVal = parseFloat(value);
+                let newLevels = { ...levels, [field]: value };
+                if (!isNaN(numVal)) {
+                    if (field === 'minor') {
+                        newLevels.mainRes = (numVal + 5).toFixed(2);
+                        newLevels.mainSup = (numVal - 5).toFixed(2);
+                    } else if (field === 'mainRes') {
+                        newLevels.minor = (numVal - 5).toFixed(2);
+                        newLevels.mainSup = (numVal - 10).toFixed(2);
+                    } else if (field === 'mainSup') {
+                        newLevels.minor = (numVal + 5).toFixed(2);
+                        newLevels.mainRes = (numVal + 10).toFixed(2);
+                    }
+                }
+                setLevels(newLevels);
+            };
+
+            const updatePlan = (tfId, index, field, value) => {
+                setPlans(prev => {
+                    const tfPlans = [...prev[tfId]];
+                    if (field === 'direction') {
+                        tfPlans[index] = { ...tfPlans[index], [field]: value, pattern: '' };
+                    } else {
+                        tfPlans[index] = { ...tfPlans[index], [field]: value };
+                    }
+                    return { ...prev, [tfId]: tfPlans };
+                });
+            };
+
+            const addPlan = (tfId) => {
+                setPlans(prev => ({
+                    ...prev,
+                    [tfId]: [...prev[tfId], { ...createEmptyPlan(), id: Date.now() }]
+                }));
+            };
+
+            const removePlan = (tfId, index) => {
+                setPlans(prev => {
+                    const tfPlans = prev[tfId].filter((_, i) => i !== index);
+                    return { ...prev, [tfId]: tfPlans };
+                });
+            };
+
+            const toggleCollapse = (tfId) => {
+                setCollapsedTFs(prev => ({
+                    ...prev,
+                    [tfId]: !prev[tfId]
+                }));
+            };
+
+            const calculateTP = (tfId, entryPrice, direction) => {
+                const tf = TIMEFRAMES.find(t => t.id === tfId);
+                if (!entryPrice || isNaN(entryPrice)) return { tp1: '-', tp2: '-' };
+
+                const price = parseFloat(entryPrice);
+                const factor = direction === 'BUY' ? 1 : -1;
+                
+                if (tf.tp1 !== undefined) {
+                    const tp1 = tf.tp1 > 0 ? (price + (tf.tp1 * factor)).toFixed(2) : '-';
+                    const tp2 = tf.tp2 > 0 && tf.tp2 !== null ? (price + (tf.tp2 * factor)).toFixed(2) : '-';
+                    return { tp1, tp2 };
+                }
+                return { tp1: '-', tp2: '-' };
+            };
+
+            return (
+                <div id="main-content" className="max-w-4xl mx-auto space-y-6 p-4">
+                    {/* Header */}
+                    <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 sticky top-0 z-30">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                            <div>
+                                <h1 className="text-xl font-bold text-green-700 leading-tight">แผนการเทรดระบบแม่ปลาปากกาเขียว</h1>
+                                <p className="text-gray-400 text-xs mt-1">บันทึกแผนการเทรดประจำวัน</p>
+                            </div>
+                            <div className="flex items-center gap-2 self-end md:self-auto">
+                                <button 
+                                    onClick={exportToPDF}
+                                    disabled={isExporting}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors shadow-sm text-sm font-medium ${isExporting ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+                                >
+                                    <DownloadIcon /> <span>{isExporting ? 'Creating PDF...' : 'Export PDF'}</span>
+                                </button>
+                                <button 
+                                    onClick={generateSummary}
+                                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors shadow-sm text-sm font-medium"
+                                >
+                                    <SparklesIcon /> <span>AI สรุปผล</span>
+                                </button>
+                                <button 
+                                    onClick={saveData}
+                                    className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-colors shadow-sm text-sm font-medium"
+                                >
+                                    <SaveIcon /> <span>บันทึก & CSV</span>
+                                </button>
+                                {saveStatus && <span className="absolute -bottom-6 right-4 text-xs text-green-600 font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-green-100">{saveStatus}</span>}
+                            </div>
+                        </div>
+
+                        {/* Daily Levels */}
+                        <div className="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden transition-all">
+                             <div 
+                                className="flex flex-col md:flex-row items-center justify-center p-3 gap-2 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => setIsDailyLevelsCollapsed(!isDailyLevelsCollapsed)}
+                             >
+                                <div className="flex items-center gap-2 opacity-80">
+                                    <RotateCcwIcon size={16} /> 
+                                    <span className="text-sm font-bold text-gray-600 uppercase tracking-wide">กรอบราคาประจำวัน</span>
+                                    {isDailyLevelsCollapsed ? <ChevronDownIcon size={16} /> : <ChevronUpIcon size={16} />}
+                                </div>
+                                <div className="relative ml-2" onClick={(e) => e.stopPropagation()}>
+                                    <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                        <CalendarIcon />
+                                    </span>
+                                    <input 
+                                        type="date" 
+                                        value={currentDate}
+                                        onChange={(e) => loadDataForDate(e.target.value)}
+                                        className="pl-7 pr-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 outline-none shadow-sm bg-white"
+                                    />
+                                </div>
+                            </div>
+                            
+                            {!isDailyLevelsCollapsed && (
+                                <div className="flex flex-col items-center gap-2 pb-3 px-3 bg-gray-50/50">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-red-500 w-32 text-right uppercase">แนวต้านหลัก (+5)</span>
+                                        <input 
+                                            type="number" placeholder="0.00" value={levels.mainRes}
+                                            onChange={(e) => handleLevelChange('mainRes', e.target.value)}
+                                            className="py-1 px-2 border border-red-200 rounded text-center text-base w-28 font-bold text-red-600 bg-white focus:ring-1 focus:ring-red-400 outline-none shadow-sm"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2 relative">
+                                         <div className="absolute left-[-24px] top-1/2 transform -translate-y-1/2 text-gray-300 hidden sm:block">
+                                            <ArrowUpCircleIcon size={14}/>
+                                         </div>
+                                        <span className="text-xs font-bold text-blue-500 w-32 text-right uppercase">แนวรับ / ต้านย่อย</span>
+                                        <input 
+                                            type="number" placeholder="0.00" value={levels.minor}
+                                            onChange={(e) => handleLevelChange('minor', e.target.value)}
+                                            className="py-1 px-2 border border-blue-200 rounded text-center text-base w-28 font-bold text-blue-600 bg-white focus:ring-1 focus:ring-blue-400 outline-none shadow-sm z-10"
+                                        />
+                                         <div className="absolute right-[-24px] top-1/2 transform -translate-y-1/2 text-gray-300 hidden sm:block">
+                                            <ArrowDownCircleIcon size={14}/>
+                                         </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-green-500 w-32 text-right uppercase">แนวรับหลัก (-5)</span>
+                                        <input 
+                                            type="number" placeholder="0.00" value={levels.mainSup}
+                                            onChange={(e) => handleLevelChange('mainSup', e.target.value)}
+                                            className="py-1 px-2 border border-green-200 rounded text-center text-base w-28 font-bold text-green-600 bg-white focus:ring-1 focus:ring-green-400 outline-none shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* External Plan (Collapsible) */}
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm mt-2 overflow-hidden transition-all">
+                            {/* Header */}
+                            <div 
+                                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 transition-colors select-none"
+                                onClick={() => setIsExternalPlanCollapsed(!isExternalPlanCollapsed)}
+                            >
+                                <div className="flex items-center gap-2 text-gray-600 font-bold text-sm">
+                                    <PasteIcon /> 
+                                    <span>บันทึกแผนจากภายนอก (Copy & Paste เพื่อให้ AI วิเคราะห์)</span>
+                                </div>
+                                <div className="text-gray-400 opacity-80">
+                                    {isExternalPlanCollapsed ? <ChevronDownIcon size={20} /> : <ChevronUpIcon size={20} />}
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            {!isExternalPlanCollapsed && (
+                                <div className="p-3 border-t border-gray-100">
+                                    <textarea 
+                                        value={externalPlan} onChange={(e) => setExternalPlan(e.target.value)}
+                                        placeholder="วางข้อความแผนการเทรดจากกลุ่มหรือแหล่งอื่นที่นี่..."
+                                        className="w-full h-24 p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 resize-y"
+                                    ></textarea>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Timeframes Grid */}
+                    <div className="grid grid-cols-1 gap-6 pt-2">
+                        {TIMEFRAMES.map((tf) => {
+                            const tfPlans = plans[tf.id] || [];
+                            const isCollapsed = collapsedTFs[tf.id];
+
+                            return (
+                                <div key={tf.id} className={`bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-300 ${isCollapsed ? 'opacity-80 hover:opacity-100 overflow-hidden' : 'overflow-visible'}`}>
+                                    <div 
+                                        className={`${tf.color} ${tf.text} px-4 py-3 flex justify-between items-center cursor-pointer select-none`}
+                                        onClick={() => toggleCollapse(tf.id)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-xl">{tf.label}</span>
+                                            {isCollapsed && <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">{tfPlans.length} แผน</span>}
+                                        </div>
+                                        <div className="p-1 hover:bg-white/20 rounded-full transition-colors opacity-90">
+                                            {isCollapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}
+                                        </div>
+                                    </div>
+
+                                    {!isCollapsed && (
+                                        <div className="p-6 space-y-6 bg-gray-50/30">
+                                            {tfPlans.map((plan, index) => {
+                                                const { tp1, tp2 } = calculateTP(tf.id, plan.entryPrice, plan.direction);
+                                                const currentPatterns = plan.direction === 'BUY' ? BUY_PATTERNS : SELL_PATTERNS;
+
+                                                return (
+                                                    <div key={plan.id} className="relative bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-5">
+                                                        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                                                            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Plan #{index + 1}</span>
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1.5">
+                                                                    <div className="text-gray-400"><ClockIcon /></div>
+                                                                    <input 
+                                                                        type="time" value={plan.time}
+                                                                        onChange={(e) => updatePlan(tf.id, index, 'time', e.target.value)}
+                                                                        className="bg-transparent text-sm text-gray-700 outline-none w-20 text-center font-mono"
+                                                                    />
+                                                                </div>
+                                                                {tfPlans.length > 1 && (
+                                                                    <button onClick={() => removePlan(tf.id, index)} className="text-gray-300 hover:text-red-500 transition-colors" title="ลบแผนนี้">
+                                                                        <TrashIcon />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                                                            {/* Left */}
+                                                            <div className="space-y-4">
+                                                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                                                    <button 
+                                                                        onClick={() => updatePlan(tf.id, index, 'direction', 'BUY')}
+                                                                        className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${plan.direction === 'BUY' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                                                    >BUY</button>
+                                                                    <button 
+                                                                        onClick={() => updatePlan(tf.id, index, 'direction', 'SELL')}
+                                                                        className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${plan.direction === 'SELL' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                                                    >SELL</button>
+                                                                </div>
+                                                                
+                                                                {/* Custom Image Select */}
+                                                                <ImageSelect 
+                                                                    value={plan.pattern || ''}
+                                                                    options={currentPatterns}
+                                                                    placeholder="เลือก Pattern..."
+                                                                    onChange={(val) => updatePlan(tf.id, index, 'pattern', val)}
+                                                                />
+
+                                                                <div>
+                                                                    <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">ไส้หลัง Sig / จุดเช็ค</label>
+                                                                    <input 
+                                                                        type="number" value={plan.entryPrice}
+                                                                        onChange={(e) => updatePlan(tf.id, index, 'entryPrice', e.target.value)}
+                                                                        placeholder="0.00"
+                                                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-mono font-medium text-gray-800 text-lg shadow-sm"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Right */}
+                                                            <div className="space-y-4">
+                                                                 <div>
+                                                                    <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">วงจรกราฟ</label>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {CYCLES.map(c => (
+                                                                            <button
+                                                                                key={c} onClick={() => updatePlan(tf.id, index, 'cycle', c)}
+                                                                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                                                                                    plan.cycle === c ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                                                                }`}
+                                                                            >{c}</button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">กรอบ Sideway (SW)</label>
+                                                                    <div className="flex gap-2">
+                                                                        <div className="flex-1">
+                                                                            <input type="number" placeholder="กรอบบน" value={plan.swUpper}
+                                                                                onChange={(e) => updatePlan(tf.id, index, 'swUpper', e.target.value)}
+                                                                                className="w-full p-2 border border-gray-300 rounded-lg text-center text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <input type="number" placeholder="กรอบล่าง" value={plan.swLower}
+                                                                                onChange={(e) => updatePlan(tf.id, index, 'swLower', e.target.value)}
+                                                                                className="w-full p-2 border border-gray-300 rounded-lg text-center text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 grid grid-cols-2 gap-4">
+                                                                    <div className="flex flex-col items-center">
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <span className="text-xs font-bold text-gray-500">TP 1 {tf.tp1 > 0 && `(${plan.direction === 'SELL' ? '-' : '+'}${tf.tp1})`}</span>
+                                                                             <button onClick={() => updatePlan(tf.id, index, 'tp1Hit', !plan.tp1Hit)}
+                                                                                className={`transition-colors ${plan.tp1Hit ? 'text-green-500' : 'text-gray-300 hover:text-gray-400'}`}>
+                                                                                <CheckCircleIcon filled={plan.tp1Hit} />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className={`text-lg font-mono font-bold ${plan.tp1Hit ? 'text-green-600 line-through opacity-60' : 'text-gray-800'}`}>{tp1}</div>
+                                                                    </div>
+                                                                    {tf.tp2 !== null && (
+                                                                        <div className="flex flex-col items-center border-l border-gray-200 pl-4">
+                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                                <span className="text-xs font-bold text-gray-500">TP 2 {tf.tp2 > 0 && `(${plan.direction === 'SELL' ? '-' : '+'}${tf.tp2})`}</span>
+                                                                                 <button onClick={() => updatePlan(tf.id, index, 'tp2Hit', !plan.tp2Hit)}
+                                                                                    className={`transition-colors ${plan.tp2Hit ? 'text-green-500' : 'text-gray-300 hover:text-gray-400'}`}>
+                                                                                    <CheckCircleIcon filled={plan.tp2Hit} />
+                                                                                </button>
+                                                                            </div>
+                                                                            <div className={`text-lg font-mono font-bold ${plan.tp2Hit ? 'text-green-600 line-through opacity-60' : 'text-gray-800'}`}>{tp2}</div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <input type="text" value={plan.note} onChange={(e) => updatePlan(tf.id, index, 'note', e.target.value)}
+                                                                placeholder="Note..." className="w-full text-sm p-2 border-b border-gray-200 focus:border-gray-400 outline-none bg-transparent text-gray-700"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            <button onClick={() => addPlan(tf.id)} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-600 hover:bg-white transition-all flex justify-center items-center gap-2 text-sm font-medium">
+                                                <PlusIcon /> Add Plan
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Footer / Summary Modal remains same */}
+                    {savedDates.length > 0 && (
+                        <div className="mt-8 p-4 border-t border-gray-200 text-center">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center justify-center gap-2"><HistoryIcon /> History</h3>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {savedDates.slice(0, 5).map(date => (
+                                    <button key={date} onClick={() => loadDataForDate(date)} className="text-xs bg-white border border-gray-200 hover:border-green-500 hover:text-green-600 text-gray-500 px-3 py-1 rounded-full transition-all shadow-sm">
+                                        {date}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {showSummary && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden modal-animate flex flex-col max-h-[90vh]">
+                                <div className="bg-blue-600 p-4 flex justify-between items-center text-white shrink-0">
+                                    <h2 className="text-lg font-bold flex items-center gap-2"><SparklesIcon /> AI สรุปผล</h2>
+                                    <button onClick={() => setShowSummary(false)} className="hover:bg-blue-500 p-1 rounded transition"><XIcon /></button>
+                                </div>
+                                <div className="p-6 overflow-y-auto grow">
+                                    <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{summaryContent}</pre>
+                                </div>
+                                <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-white shrink-0">
+                                    <button onClick={() => setShowSummary(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition">ปิด</button>
+                                    <button onClick={copyToClipboard} className={`px-4 py-2 text-sm rounded-lg transition flex items-center gap-2 shadow-sm ${copyStatus ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                        {copyStatus ? <span>{copyStatus}</span> : <React.Fragment><CopyIcon /> คัดลอก</React.Fragment>}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
